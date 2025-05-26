@@ -23,5 +23,38 @@ class magazine:
                 )
                 conn.commit()
                 return self
-                
-        
+    def articles(self):
+        """ Get all articles published in this magazine"""
+        with get_connection() as conn: 
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM articles WHERE magazine_id = ?",
+                (self.id,)
+            )
+            return cursor.fetchall()
+
+    def contributors(self):
+                   
+        """Get all authors who have written for this magazine"""
+
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                 """
+                SELECT DISTINCT authors.* FROM authors
+                JOIN articles ON authors.id = articles.author_id
+                WHERE articles.magazine_id = ?
+                """,
+                (self.id,)
+        )
+        return [row['title'] for row in cursor.fetchall()]
+    
+    def article_titles(self):
+        """Get list of all article titles for this magazine"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT title FROM articles WHERE magazine_id = ?",
+                (self.id,)
+            )
+            return [row['title'] for row in cursor.fetchall()]
