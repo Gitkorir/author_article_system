@@ -20,6 +20,19 @@ class Author:
                        (self.name,self.email,self.id) 
                    )
               conn.commit()
-        return    self          
+        return    self   
+
+    def articles(self):
+         #get all articles by an  author in the data base
+         with get_connection() as conn:
+              cursor = conn.cursor()
+              cursor.execute(
+                   #SELECT * from articles with a foreign id of Author
+                   (self.id,)
+
+              )
+              return cursor.fetchall()
+            
+                  
      
 
