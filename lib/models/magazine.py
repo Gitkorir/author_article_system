@@ -58,3 +58,34 @@ class magazine:
                 (self.id,)
             )
             return [row['title'] for row in cursor.fetchall()]
+    
+    def contributing_authors(self):
+        """Get authors with more than 2 articles in this magazine"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT authors.*, COUNT(articles.id) as article_count
+                FROM authors
+                JOIN articles ON authors.id = articles.author_id
+                WHERE articles.magazine_id = ?
+                GROUP BY authors.id
+                HAVING article_count > 2
+                """,
+                (self.id,)
+            )
+            return cursor.fetchall()
+    
+    @classmethod
+    def find_by_id(cls, magazine_id):
+        """Find a magazine by ID"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM magazines WHERE id = ?",
+                (magazine_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                return cls(**row)
+            return N
