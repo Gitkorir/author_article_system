@@ -14,11 +14,11 @@ def transfer_articles(source_author_id, target_author_id):
             cursor = conn.cursor()
             cursor.execute("SELECT 1 FROM authors WHERE id = ?", (source_author_id,))
             if not cursor.fetchone():
-                raise RecordNotFound(f"Source author {source_author_id} not found")
+                raise 'RecordNotFound'(f"Source author {source_author_id} not found")
                 
             cursor.execute("SELECT 1 FROM authors WHERE id = ?", (target_author_id,))
             if not cursor.fetchone():
-                raise RecordNotFound(f"Target author {target_author_id} not found")
+                raise 'RecordNotFound'(f"Target author {target_author_id} not found")
             
             # Perform transfer
             cursor.execute("""
