@@ -123,3 +123,32 @@ class magazine:
                 (category,)
             )
             return [cls(**row) for row in cursor.fetchall()]
+    
+    @classmethod
+    def most_popular(cls, limit=3):
+        """Get magazines with most articles"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT magazines.*, COUNT(articles.id) as article_count
+                FROM magazines
+                LEFT JOIN articles ON magazines.id = articles.magazine_id
+                GROUP BY magazines.id
+                ORDER BY article_count DESC
+                LIMIT ?
+                """, (limit,))
+            return cursor.fetchall()
+
+    def authors_by_contribution(self):
+        """Get authors ordered by their contribution count"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT authors.*, COUNT(articles.id) as article_count
+                FROM authors
+                JOIN articles ON authors.id = articles.author_id
+                WHERE articles.magazine_id = ?
+                GROUP BY authors.id
+                ORDER BY article_count DESC
+                """, (self.id,))
+            return cursor.fetchall()
