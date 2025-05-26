@@ -32,6 +32,17 @@ class Author:
 
               )
               return cursor.fetchall()
+         
+    def magazines(self):
+         #get all the magazines this aurth has written for 
+        with get_connection() as conn:
+             cursor = conn.cursor()
+             cursor.execute(
+                  (self.id,)
+             )
+             return cursor.fetchall()
+                  
+               
             
                   
      
