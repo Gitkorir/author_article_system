@@ -1,6 +1,8 @@
 from lib.db.connection import get_connection
 
 class magazine:
+    VALID_CATEGORIES = ['Technology', 'Science', 'Business', 'Arts', 'Health']
+
     def __init__(self,name, category, id= None):
         self.name= name
         self.category= category
