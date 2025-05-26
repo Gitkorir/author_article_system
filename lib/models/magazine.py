@@ -7,6 +7,15 @@ class magazine:
         self.name= name
         self.category= category
         self.id = id
+        self._validate()
+
+    def _validate(self):
+        """Validate magazine attributes"""
+        if not isinstance(self.name, str) or len(self.name.strip()) < 2:
+            raise ValueError("Name must be at least 2 characters long")
+        
+        if self.category not in self.VALID_CATEGORIES:
+            raise ValueError(f"Category must be one of: {', '.join(self.VALID_CATEGORIES)}")     
     
     def save(self):
         """Save the magazine to the database"""
