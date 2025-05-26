@@ -101,3 +101,14 @@ class magazine:
                 
             )
             return [cls(**row) for row in cursor.fetchall()]
+    
+    @classmethod
+    def find_by_category(cls, category):
+        """Find magazines by category"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM magazines WHERE category = ?",
+                (category,)
+            )
+            return [cls(**row) for row in cursor.fetchall()]
