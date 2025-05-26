@@ -88,4 +88,16 @@ class magazine:
             row = cursor.fetchone()
             if row:
                 return cls(**row)
-            return N
+            return None 
+
+    @classmethod
+    def find_by_name(cls,name):
+        """Find magazines by name"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM magazines WHERE name LIKE  ?",
+                (f"%{name}",)
+                
+            )
+            return [cls(**row) for row in cursor.fetchall()]
