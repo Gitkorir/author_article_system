@@ -48,9 +48,35 @@ class Author:
                   (self.id,)
              )
              return cursor.fetchall()
+        
                   
-               
-            
+    
+    @classmethod
+    def find_by_id(cls, author_id):
+        """Find an author by ID"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM authors WHERE id = ?",
+                (author_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                return cls(**row)
+            return None
+
+    @classmethod
+    def find_by_name(cls, name):
+        """Find authors by name"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM authors WHERE name LIKE ?",
+                (f"%{name}%",)
+            )
+            return [cls(**row) for row in cursor.fetchall()]
+
+   
                   
      
 
