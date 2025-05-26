@@ -5,7 +5,19 @@ class Author:
           self.id = id
           self.name= name
           self.email= email
-
+          self._validate()
+    
+    def _validate(self):
+        """Validate author attributes"""
+        if not isinstance(self.name, str) or len(self.name.strip()) < 2:
+            raise ValueError("Name must be at least 2 characters long")
+        
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", self.email):
+            raise ValueError("Invalid email format")
+        
+        if len(self.email) > 255:
+            raise ValueError("Email too long (max 255 chars)")
+        
     def save(self):
         """Save the author to the database"""
         with get_connection() as conn:
