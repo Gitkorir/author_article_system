@@ -87,7 +87,39 @@ class Author:
                 (f"%{name}%",)
             )
             return [cls(**row) for row in cursor.fetchall()]
+   # In lib/models/author.py
 
+class Author:
+    # ... (existing methods)
+    
+    @classmethod
+    def top_writers(cls, limit=5):
+        """Get authors with most articles, ordered by article count"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT authors.*, COUNT(articles.id) as article_count
+                FROM authors
+                LEFT JOIN articles ON authors.id = articles.author_id
+                GROUP BY authors.id
+                ORDER BY article_count DESC
+                LIMIT ?
+                """, (limit,))
+            return cursor.fetchall()
+
+    def magazines_by_article_count(self):
+        """Get magazines this author writes for, with article counts"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT magazines.*, COUNT(articles.id) as article_count
+                FROM magazines
+                JOIN articles ON magazines.id = articles.magazine_id
+                WHERE articles.author_id = ?
+                GROUP BY magazines.id
+                ORDER BY article_count DESC
+                """, (self.id,))
+            return cursor.fetchall()
    
                   
      
