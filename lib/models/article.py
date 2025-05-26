@@ -7,6 +7,7 @@ class Article:
         self.content = content
         self.author_id = author_id
         self.magazine_id = magazine_id
+        self._validate()
 
     def save(self):
         """Save the article to the database"""
@@ -101,3 +102,32 @@ class Article:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM articles")
             return [cls(**row) for row in cursor.fetchall()]
+        
+   # In lib/models/article.py
+
+class Article:
+    # ... (existing methods)
+    
+    @classmethod
+    def search(cls, query):
+        """Search articles by title or content"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM articles
+                WHERE title LIKE ? OR content LIKE ?
+                ORDER BY title
+                """, (f"%{query}%", f"%{query}%"))
+            return [cls(**row) for row in cursor.fetchall()]
+
+    @classmethod
+    def recent(cls, limit=5):
+        """Get most recent articles"""
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM articles
+                ORDER BY id DESC
+                LIMIT ?
+                """, (limit,))
+            return [cls(**row) for row in cursor.fetchall()]     
