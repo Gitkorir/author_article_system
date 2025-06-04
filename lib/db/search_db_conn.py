@@ -2,6 +2,7 @@ import os
 import ast
 import importlib.util
 import sys
+import sqlite3
 
 def get_connection(root_dir="."):
     for dirpath, _, filenames in os.walk(root_dir):
@@ -38,7 +39,7 @@ def get_connection(root_dir="."):
                             return conn_obj
 
     print("❌ No sqlite3 connection variable found.")
-    return None
+    return sqlite3.connect("data/articles.db")
 
 # Run the search
 # if __name__ == "__main__":

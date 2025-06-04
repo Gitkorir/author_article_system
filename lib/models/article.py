@@ -1,4 +1,5 @@
 from lib.db.connection import get_connection
+import sqlite3
 
 class Article:
     def __init__(self, title, content, author_id, magazine_id, id=None):
@@ -9,22 +10,29 @@ class Article:
         self.magazine_id = magazine_id
         self._validate()
 
+    def _validate(self):
+        if not self.title or not isinstance(self.title, str):
+            raise ValueError("Article title must be a non-empty string")
+        if not self.content or not isinstance(self.content, str):
+            raise ValueError("Article content must be a non-empty string")
+        if not isinstance(self.author_id, int):
+            raise ValueError("Author ID must be an integer")
+        if not isinstance(self.magazine_id, int):
+            raise ValueError("Magazine ID must be an integer")
+
     def save(self):
-        """Save the article to the database"""
         with get_connection() as conn:
             cursor = conn.cursor()
             if self.id is None:
                 cursor.execute(
-                    """INSERT INTO articles 
-                    (title, content, author_id, magazine_id) 
+                    """INSERT INTO articles (title, content, author_id, magazine_id)
                     VALUES (?, ?, ?, ?)""",
                     (self.title, self.content, self.author_id, self.magazine_id)
                 )
                 self.id = cursor.lastrowid
             else:
                 cursor.execute(
-                    """UPDATE articles SET 
-                    title = ?, content = ?, author_id = ?, magazine_id = ?
+                    """UPDATE articles SET title = ?, content = ?, author_id = ?, magazine_id = ?
                     WHERE id = ?""",
                     (self.title, self.content, self.author_id, self.magazine_id, self.id)
                 )
@@ -32,102 +40,114 @@ class Article:
         return self
 
     def author(self):
-        """Get the author of this article"""
         from lib.models.author import Author
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM authors WHERE id = ?",
                 (self.author_id,)
             )
             row = cursor.fetchone()
-            if row:
-                return Author(**row)
-            return None
+        if row:
+            return Author(**row)
+        return None
 
     def magazine(self):
-        """Get the magazine this article belongs to"""
         from lib.models.magazine import Magazine
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM magazines WHERE id = ?",
                 (self.magazine_id,)
             )
             row = cursor.fetchone()
-            if row:
-                return Magazine(**row)
-            return None
+        if row:
+            return Magazine(**row)
+        return None
 
     @classmethod
     def find_by_id(cls, article_id):
-        """Find an article by ID"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM articles WHERE id = ?",
                 (article_id,)
             )
             row = cursor.fetchone()
-            if row:
-                return cls(**row)
-            return None
+        if row:
+            return cls(**row)
+        return None
 
     @classmethod
     def find_by_author(cls, author_id):
-        """Find all articles by a specific author"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM articles WHERE author_id = ?",
                 (author_id,)
             )
-            return [cls(**row) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+        return [cls(**row) for row in rows]
 
     @classmethod
     def find_by_magazine(cls, magazine_id):
-        """Find all articles in a specific magazine"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM articles WHERE magazine_id = ?",
                 (magazine_id,)
             )
-            return [cls(**row) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+        return [cls(**row) for row in rows]
+
+    @classmethod
+    def find_by_title(cls, title):
+        from lib.db.search_db_conn import get_connection
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        row = cursor.execute("SELECT * FROM articles WHERE title = ?", (title,))
+        
+        record = row.fetchone()
+        conn.close()
+        return cls(**record) if record else None
 
     @classmethod
     def all(cls):
-        """Get all articles"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM articles")
-            return [cls(**row) for row in cursor.fetchall()]
-        
-   # In lib/models/article.py
+            rows = cursor.fetchall()
+        return [cls(**row) for row in rows]
 
-class Article:
-    # ... (existing methods)
-    
     @classmethod
     def search(cls, query):
-        """Search articles by title or content"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT * FROM articles
                 WHERE title LIKE ? OR content LIKE ?
                 ORDER BY title
-                """, (f"%{query}%", f"%{query}%"))
-            return [cls(**row) for row in cursor.fetchall()]
+            """, (f"%{query}%", f"%{query}%"))
+            rows = cursor.fetchall()
+        return [cls(**row) for row in rows]
 
     @classmethod
     def recent(cls, limit=5):
-        """Get most recent articles"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT * FROM articles
                 ORDER BY id DESC
                 LIMIT ?
-                """, (limit,))
-            return [cls(**row) for row in cursor.fetchall()]     
+            """, (limit,))
+            rows = cursor.fetchall()
+        return [cls(**row) for row in rows]

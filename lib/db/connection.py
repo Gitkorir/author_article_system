@@ -1,26 +1,25 @@
+from contextlib import contextmanager
 import sqlite3
 from pathlib import Path
-from contextlib import contextmanager
-from .exceptions import DatabaseError
 
-
-DB_PATH = Path(__file__).parent.parent.parent /"data" / "articles.db"
+DB_PATH = Path("data/articles.db")
 
 @contextmanager
 def get_connection():
-    """Create and return a database connection"""
-    """Create and yield a database connection with error handling"""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)  # ensure folder exists
     conn = None
     try:
         conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
+        conn.row_factory = sqlite3.Row  # Enable dict-like row access
+        conn.execute("PRAGMA foreign_keys = ON")
         yield conn
+        conn.commit()
     except sqlite3.Error as e:
-        raise DatabaseError(f"Database operation failed: {e}")
+        if conn:
+            conn.rollback()
+        print(f"❌ DB connection failed: {e}")
+        raise
     finally:
         if conn:
             conn.close()
-    
-   
+            print(f"✅ Closed DB connection to {DB_PATH}")

@@ -2,14 +2,17 @@ from lib.db.connection import get_connection
 from lib.models.article import Article
 from lib.models.magazine import Magazine
 import re
+import sqlite3
 
 class Author:
-    def __init__(self,name,email,id=None):
-          self.id = id
-          self.name= name
-          self.email= email
-          self._validate()
-    
+    def __init__(self, id=None, name=None, bio=None, email=None):
+        self.id = id
+        self.name = name
+        self.bio = bio
+        self.email = email
+        self._validate()
+ 
+  
     def _validate(self):
         """Validate author attributes"""
         if not isinstance(self.name, str) or len(self.name.strip()) < 2:
@@ -42,17 +45,21 @@ class Author:
     def articles(self):
          """Get all articles by this author"""
          with get_connection() as conn:
+              conn.row_factory = sqlite3.Row
               cursor = conn.cursor()
               cursor.execute(
                     "SELECT * FROM articles WHERE author_id = ?",
                    (self.id,)
 
               )
+              
+
               return [Article(**row) for row in cursor.fetchall()]
          
     def magazines(self):
         """Get all magazines this author has written for""" 
         with get_connection() as conn:
+             conn.row_factory = sqlite3.Row
              cursor = conn.cursor()
              cursor.execute(
                    """
@@ -62,39 +69,64 @@ class Author:
             """,
                   (self.id,)
              )
+          
+
              return [Magazine(**row) for row in cursor.fetchall()]
         
-                  
-    
+    def add_article(self, title, content, magazine):
+        """Add a new article by this author to a magazine"""
+        article = Article(title=title, content=content, author_id=self.id, magazine_id=magazine.id)
+        return article.save()
+ 
+
     @classmethod
     def find_by_id(cls, author_id):
         """Find an author by ID"""
         with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM authors WHERE id = ?",
                 (author_id,)
             )
+            
+
             row = cursor.fetchone()
             if row:
                 return cls(**row)
             return None
 
+    
     @classmethod
     def find_by_name(cls, name):
-        """Find authors by name"""
         with get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT * FROM authors WHERE name LIKE ?",
-                (f"%{name}%",)
+                "SELECT * FROM authors WHERE name = ?",
+                (name,)
             )
-            return [cls(**row) for row in cursor.fetchall()]
-   # In lib/models/author.py
-
-class Author:
-    # ... (existing methods)
-    
+            row = cursor.fetchone()
+            if row:
+                return cls(**row)
+            return None
+        
+    @classmethod
+    def top_author(cls):
+        with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT authors.*, COUNT(articles.id) as article_count
+                FROM authors
+                JOIN articles ON authors.id = articles.author_id
+                GROUP BY authors.id
+                ORDER BY article_count DESC
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            if row is None:
+                return None
+            return cls(**row)
     @classmethod
     def top_writers(cls, limit=5):
         """Get authors with most articles, ordered by article count"""
@@ -108,22 +140,11 @@ class Author:
                 ORDER BY article_count DESC
                 LIMIT ?
                 """, (limit,))
-            return cursor.fetchall()
+            conn.row_factory = sqlite3.Row
 
-    def magazines_by_article_count(self):
-        """Get magazines this author writes for, with article counts"""
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT magazines.*, COUNT(articles.id) as article_count
-                FROM magazines
-                JOIN articles ON magazines.id = articles.magazine_id
-                WHERE articles.author_id = ?
-                GROUP BY magazines.id
-                ORDER BY article_count DESC
-                """, (self.id,))
-            return cursor.fetchall()
-   
-                  
+            rows = cursor.fetchall()
+            return [cls(**row) for row in rows]
+
      
 
+   

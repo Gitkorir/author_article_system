@@ -2,6 +2,8 @@
 from lib.models.author import Author
 from lib.models.magazine import Magazine
 from lib.models.article import Article
+import sys
+
 
 from lib.db.search_db_conn import get_connection
 import sqlite3
@@ -13,6 +15,9 @@ from random import random
 if not callable(globals().get("get_connection")):
     from lib.db.search_db_conn import get_connection
 
+from faker import Faker
+fake = Faker()
+
 def insert_values(tbl, vals={}):
     conn = get_connection()
     cursor = conn.cursor()
@@ -20,29 +25,31 @@ def insert_values(tbl, vals={}):
     info = cursor.execute(f"SELECT name, type FROM pragma_table_info('{tbl}')")
     for i in info:
         col, type = i
-        if col in vals or col.count("_id") > 0 or col == 'id': continue
-        if hasattr(Faker, col):
-            vals[col] = getattr(Faker(), col)
+        if col in vals or col.count("_id") > 0 or col == 'id':
+            continue
+        if col == "email":
+            vals["email"] = fake.email()  # ✅ Always generate valid email
+        elif hasattr(Faker, col):
+            vals[col] = getattr(fake, col)
         elif type == "TEXT":
-            vals[col] = Faker().text(max_nb_chars=10)
+            vals[col] = fake.text(max_nb_chars=10)
         else:
             vals[col] = int(random())
 
     cols = ",".join(vals.keys())
-    q = f"INSERT INTO {tbl} ({cols}) VALUES ({'?,'*(len(vals.keys())-1)}?)"
-    print(q)
-    cursor.execute(q, (*vals.values(), ))
+    q = f"INSERT INTO {tbl} ({cols}) VALUES ({'?,'*(len(vals)-1)}?)"
+    cursor.execute(q, tuple(vals.values()))
     conn.commit()
     conn.close()
 
 def init_schema():
-    conn = get_connection()
+    conn = get_connection() 
     conn.row_factory = sqlite3.Row
-    
+
     for dirpath, dirnames, filenames in os.walk("."):
         for filename in filenames:
             if filename == "schema.sql":
-                full_path = os.path.join(dirpath, filename)           
+                full_path = os.path.join(dirpath, filename)
                 with open(full_path) as f:
                     conn.executescript(f.read())
 
@@ -51,14 +58,15 @@ def init_schema():
     cursor.execute("DELETE FROM magazines")
     cursor.execute("DELETE FROM articles")
     conn.commit()
-    conn.close()
-
+    conn.close()  # Manually close connection
+   
 @pytest.fixture(scope="session", autouse=True)
 def setup_before_all_tests():
     init_schema()
 
-    insert_values("authors", {"name":'Alice'})
-    insert_values("authors", {"name":'Bob'})
+    insert_values("authors", {"name": "Alice", "email": "alice@example.com"})
+    insert_values("authors", {"name": "Bob", "email": "bob@example.com"})
+
     
     insert_values("magazines", {"name":"Tech Times", "category":"Technology"})
     insert_values("magazines", {"name":"Health Weekly", "category":"Health"})
@@ -68,36 +76,36 @@ def setup_before_all_tests():
     insert_values("articles", {"title":"Cybersecurity Tips", "author_id":2, "magazine_id":1})
 
 def clean_up(tbl):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM ?", (tbl,))
-    conn.commit()
-    conn.close()
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        # You cannot parametrize table names, so use f-string carefully:
+        cursor.execute(f"DELETE FROM {tbl}")
+        conn.commit()
+
 
 def find_by_name(cls, tbl, name):
-    conn = get_connection()
-    cursor = conn.cursor()
-    row = cursor.execute(f"SELECT * FROM {tbl} WHERE name = ?", (name,))
-    record = row.fetchone()
-    return cls(**{ desc[0]: record[desc[0]] if type(record) != tuple else record[i] \
-                  for i, desc in enumerate(row.description) })
+     with get_connection() as conn:
+        cursor = conn.cursor()
+        row = cursor.execute(f"SELECT * FROM {tbl} WHERE name = ?", (name,))
+        record = row.fetchone()
+        if record is None:
+            return None
+        return cls(**{ desc[0]: record[desc[0]] if type(record) != tuple else record[i] \
+                      for i, desc in enumerate(row.description) })
 
 def count(tbl, where):
-    conn = get_connection()
-    cursor = conn.cursor()
-    params = []
-    for k, v in where.items():
-        params.append(k)
-        params.append(v)
-    q = "SELECT COUNT(*) AS count FROM %s WHERE %s = ?" % (tbl, *where.keys(),)
-    row = cursor.execute(q, (*where.values(),)).fetchone()
-    conn.close()
-    return row["count"]
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        # Extract key and value from where dict; assuming single key-value pair
+        key, val = next(iter(where.items()))
+        q = f"SELECT COUNT(*) AS count FROM {tbl} WHERE {key} = ?"
+        row = cursor.execute(q, (val,)).fetchone()
+        return row["count"] 
 
 def get_row(tbl):
-    conn = get_connection()
-    cursor = conn.cursor()
-    return cursor.execute(f"SELECT * FROM {tbl}")
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        return cursor.execute(f"SELECT * FROM {tbl}")
 
 def get_value(row, obj, attr):
     if hasattr(obj, attr):
@@ -118,7 +126,7 @@ def get_one(records):
         return records
 
 def test_author_save_and_find():
-    author = Author(name="Charlie")
+    author = Author(name="Charlie", email="charlie@example.com")
     author.save()
     found = None
     if callable(globals().get("Author.find_by_name")):
@@ -135,11 +143,7 @@ def test_author_articles():
     assert any(get_value(row, a, "title") == "AI Revolution" for a in articles)
 
 def test_author_magazines():
-    if callable(globals().get("Author.find_by_name")):
-        author = get_one(Author.find_by_name("Alice"))
-    else:
-        author = find_by_name(Author, 'authors', "Alice")
-    
+    author = find_by_name(Author, 'authors', "Alice")
     mags = author.magazines() if callable(author.magazines) else author.magazines
     row = get_row("magazines")
     names = [get_value(row, m, 'name') for m in mags]

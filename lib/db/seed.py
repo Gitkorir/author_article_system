@@ -17,18 +17,20 @@ def seed_database():
 
     # Sample data
     authors = [
-        Author("John Doe", "john@example.com"),
-        Author("Jane Smith", "jane@example.com"),
-        Author("Mike Johnson", "mike@example.com"),
-        Author("Sarah Williams", "sarah@example.com")
-    ]
-
+       Author(name="Alice", email="alice@example.com"),
+       Author(name="John Doe", email="john@example.com"),
+       Author(name="Jane Smith", email="jane@example.com"),
+       Author(name="Mike Johnson", email="mike@example.com"),
+       Author(name="Sarah Williams", email="sarah@example.com")
+]
     magazines = [
-        Magazine("Tech Today", "Technology"),
-        Magazine("Science Weekly", "Science"),
-        Magazine("Business Insights", "Business"),
-        Magazine("Creative Minds", "Arts")
-    ]
+       Magazine(name="Tech Today", category="Technology"),
+       Magazine(name="Science Weekly", category="Science"),
+       Magazine(name="Business Insights", category="Business"),
+       Magazine(name="Creative Minds", category="Arts")
+]
+
+   
 
     articles_data = [
         {"title": "The Future of AI", "content": "Lorem ipsum..."},
