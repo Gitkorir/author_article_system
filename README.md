@@ -87,3 +87,21 @@ search(query) - Full-text search
 recent() - Get latest articles
 
 
+### Database Setup
+# Run database migrations or initialize database schema
+# (Add specific command or script you have)
+python lib/db/setup_db.py
+
+# Or if you have a SQL script for schema creation
+sqlite3 data/articles.db < schema.sql
+
+
+##  Running the Application
+# Run main CLI or app entry point (if applicable)
+python main.py
+
+# Or start any service or script
+python run.py
+
+## Testing 
+pytest tests/test_models.py
