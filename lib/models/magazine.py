@@ -1,6 +1,7 @@
 from lib.db.connection import get_connection
 
-class magazine:
+
+class Magazine:
     VALID_CATEGORIES = ['Technology', 'Science', 'Business', 'Arts', 'Health']
 
     def __init__(self,name, category, id= None):
@@ -18,7 +19,7 @@ class magazine:
             raise ValueError(f"Category must be one of: {', '.join(self.VALID_CATEGORIES)}")     
     
     def save(self):
-        """Save the magazine to the database"""
+        """Save the magazines to the database"""
         with get_connection() as conn:
             cursor = conn.cursor()
             if self.id is None:
@@ -45,7 +46,7 @@ class magazine:
             return cursor.fetchall()
 
     def contributors(self):
-                   
+        from lib.models.author import Author           
         """Get all authors who have written for this magazine"""
 
         with get_connection() as conn:
@@ -58,7 +59,7 @@ class magazine:
                 """,
                 (self.id,)
         )
-        return [row['title'] for row in cursor.fetchall()]
+        return [Author(**row) for row in cursor.fetchall()]
     
     def article_titles(self):
         """Get list of all article titles for this magazine"""
@@ -108,7 +109,7 @@ class magazine:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM magazines WHERE name LIKE  ?",
-                (f"%{name}",)
+                (f"%{name}%",)
                 
             )
             return [cls(**row) for row in cursor.fetchall()]

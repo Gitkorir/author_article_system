@@ -1,4 +1,7 @@
 from lib.db.connection import get_connection
+from lib.models.article import Article
+from lib.models.magazine import Magazine
+import re
 
 class Author:
     def __init__(self,name,email,id=None):
@@ -45,7 +48,7 @@ class Author:
                    (self.id,)
 
               )
-              return cursor.fetchall()
+              return [Article(**row) for row in cursor.fetchall()]
          
     def magazines(self):
         """Get all magazines this author has written for""" 
@@ -59,7 +62,7 @@ class Author:
             """,
                   (self.id,)
              )
-             return cursor.fetchall()
+             return [Magazine(**row) for row in cursor.fetchall()]
         
                   
     
